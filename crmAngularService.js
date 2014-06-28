@@ -21,11 +21,11 @@ crmModule.factory('crmRestSvc', function (crmCommon, $http) {
     function update (entitySchemaName, record) {
     }    
 
-    function delete (entitySchemaName, recordId) {
+    function deleteRecord (entitySchemaName, recordId) {
     }
 
     return {
-        delete : delete,
+        delete : deleteRecord,
         update : update,
         create : create
     };
@@ -39,11 +39,11 @@ crmModule.factory('crmSoapSvc', function (crmCommon, $http) {
     function update (entityLogicalName, record) {
     }    
 
-    function delete (entityLogicalName, recordId) {
+    function deleteRecord (entityLogicalName, recordId) {
     }
 
     return {
-        delete : delete,
+        delete : deleteRecord,
         update : update,
         create : create
     };
