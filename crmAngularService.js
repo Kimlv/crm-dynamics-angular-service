@@ -2,145 +2,199 @@
 var crmModule = angular.module("crmModule", []);
 
 // common functions will be used by both the rest and soap services. 
-crmModule.factory("crmCommon", function(){
-    return {
-        getCrmContext : function () {
-            // this will return the CRM context 
-        },
-        getOrgSrvUrl : function () {
-            // ...
+crmModule.factory("crmCommon", function () {
+    'use strict';
+
+
+    function getContext() {
+        if (window.GetGlobalContext) {
+            return window.GetGlobalContext();
         }
+
+        if (window.Xrm) {
+            return window.Xrm.Page.context;
+        }
+        throw new Error("CRM Context is not available.");
+    }
+
+    var serverUrl;
+    function getServerUrl() {
+
+        if (!serverUrl) {
+
+            var url,
+                localServerUrl = window.location.protocol + "//" + window.location.host,
+                context = getContext();
+
+            if (context.getClientUrl !== undefined) {
+                url = context.getClientUrl();
+            } else if (context.isOutlookClient() && !context.isOutlookOnline()) {
+                url = localServerUrl;
+            } else {
+                url = context.getServerUrl();
+                url = url.replace(/^(http|https):\/\/([_a-zA-Z0-9\-\.]+)(:([0-9]{1,5}))?/, localServerUrl);
+                url = url.replace(/\/$/, "");
+            }
+
+            serverUrl = url;
+        }
+
+        return serverUrl;
+    }
+
+    return {
+        getCrmContext: getContext,
+        getServerUrl: getServerUrl
     };
 });
 
 crmModule.factory("crmRestSvc", function (crmCommon, $http) {
-    
-    function getOdataPath(){
-        return crmCommon.getServerUrl() + '/XRMServices/2011/Organization.svc/';
+    'use strict';
+
+    function getOdataPath() {
+        return crmCommon.getServerUrl() + '/XRMServices/2011/OrganizationData.svc/';
     }
-    
-    function retrieve (entitySchemaName, recordId, select, expand) {
-        var systemQueryOptions = "";
-        
-        if (select || expand) {
-            systemQueryOptions = "?";
-            if (select) {
-                var selectString = "$select=" + select;
-                
-                if (expand) {
-                    selectString = selectString + "," + expand;
-                }
-                systemQueryOptions = systemQueryOptions + selectString;
-            }
-            if (expand) {
-                systemQueryOptions = systemQueryOptions + "&$expand=" + expand;
-            }
+
+    function buildUrl(url, params) {
+        if (!params) {
+            return url;
         }
-  
-        var url = getOdataPath() + entitySchemaName + "Set(guid'" + id + "')" + systemQueryOptions;
+        var parts = [];
+
+        angular.forEach(params, function (value, key) {
+            if (value === null || angular.isUndefined(value)) {
+                return;
+            }
+            if (!angular.isArray(value)) {
+                value = [value];
+            }
+
+            angular.forEach(value, function (v) {
+                if (angular.isObject(v)) {
+                    v = angular.toJson(v);
+                }
+                parts.push(key + '=' + v);
+            });
+        });
+        if (parts.length > 0) {
+            url += ((url.indexOf('?') === -1) ? '?' : '&') + parts.join('&');
+        }
+        return url;
+    }
+
+    function retrieve(entitySchemaName, recordId, options) {
+        var url = (getOdataPath() + entitySchemaName + "Set(guid'" + recordId + "')");
+        var urlWithOptions = buildUrl(url, options);
 
         return $http({
-            method: "GET", 
+            method: "GET",
+            url: urlWithOptions
+        });
+    }
+
+    function retrieveMultiple(entitySchemaName, options) {
+        var url = buildUrl((getOdataPath() + entitySchemaName + "Set"), options);
+
+        return $http({
+            method: "GET",
             url: url
+        }).then(function (res) {
+            return res.data.d.results;
         });
+        //return $http({
+        //    method: "GET",
+        //    url: url
+        //});
     }
-    
-    function retrieveMultiple (entitySchemaName, options) {
-        var optionsString = "";
-        if (options) {
-            if (options.charAt(0) !== "?") {
-                optionsString = "?" + options;
-            } else { 
-                optionsString = options; 
-            }
-        }
-        
+
+    /// create a new record in CRM.
+    /// example : to create a contact in CRM
+    ///     create("Contact", { FirstName : "John", LastName : "Doe" });
+    function create(entitySchemaName, record) {
         var url = getOdataPath() + entitySchemaName + "Set";
-        
+
         return $http({
-            method: "GET", 
-            url: url,
-        });
-    }
-    
-    function create (entitySchemaName, record) {
-        var url = getOdataPath() + entitySchemaName + "Set";
-        
-        return $http({
-            method: "POST", 
+            method: "POST",
             url: url,
             data: record
         });
     }
-    
-    function update (entitySchemaName, recordId, record) {
+
+    /// update a record in CRM
+    /// Example: 
+    ///     update("Contact","38a7e85e-d0ff-e311-aba1-00155d098400", { MiddleName : "Joe"}); 
+    function update(entitySchemaName, recordId, record) {
         var url = getOdataPath() + entitySchemaName + "Set(guid'" + recordId + "')";
-        
+
         return $http({
-            method: "POST", 
+            method: "POST",
             url: url,
             data: record,
             headers: {
-               "X-HTTP-Method": "MERGE" 
-            },
-        });
-    }    
-
-    function deleteRecord (entitySchemaName, recordId) {
-        var url = getOdataPath() + entitySchemaName + "Set(guid'" + recordId + "')";
-        
-        return $http({
-            method: "POST", 
-            url: url,
-            headers: {
-               "X-HTTP-Method": "DELETE" 
-            },
+                "X-HTTP-Method": "MERGE"
+            }
         });
     }
 
-    function associate (parentId, parentEntitySchemaName, relationshipName, childId, cildEntitySchemaName) {
-  
-        var url = getOdataPath() + parentEntitySchemaName + "Set(guid'" + parentId + 
+    /// delete a record in CRM
+    /// Example: to delete a Contact in CRM
+    ///     remove("Contact","38a7e85e-d0ff-e311-aba1-00155d098400"); 
+    function remove(entitySchemaName, recordId) {
+        var url = getOdataPath() + entitySchemaName + "Set(guid'" + recordId + "')";
+
+        return $http({
+            method: "POST",
+            url: url,
+            headers: {
+                "X-HTTP-Method": "DELETE"
+            }
+        });
+    }
+
+    function associate(parentId, parentEntitySchemaName, relationshipName, childId, childEntitySchemaName) {
+
+        var url = getOdataPath() + parentEntitySchemaName + "Set(guid'" + parentId +
         "')/$links/" + relationshipName;
-        
+
         var childEntityReference = {
             uri: getOdataPath() + "/" + childEntitySchemaName + "Set(guid'" + childId + "')"
-        }
-        
+        };
+
         return $http({
-            method: "POST", 
+            method: "POST",
             url: url,
             data: childEntityReference
         });
     }
-    
-    function disassociate (parentId, parentEntitySchemaName, relationshipName, childId) {
-  
-        var url = getOdataPath() + parentEntitySchemaName + "Set(guid'" + parentId + 
-        "')/$links/" + relationshipName + "(guid'" + childId + "')");
-        
+
+    function disassociate(parentId, parentEntitySchemaName, relationshipName, childId) {
+
+        var url = getOdataPath() + parentEntitySchemaName + "Set(guid'" + parentId +
+        "')/$links/" + relationshipName + "(guid'" + childId + "')";
+
         return $http({
-            method: "POST", 
+            method: "POST",
             url: url,
             headers: {
-               "X-HTTP-Method": "DELETE" 
-            },
+                "X-HTTP-Method": "DELETE"
+            }
         });
     }
-  
+
     return {
         retrieveMultiple: retrieveMultiple,
         retrieve: retrieve,
         associate: associate,
         disassociate: disassociate,
-        delete : deleteRecord,
-        update : update,
-        create : create
+        "delete": remove, // delete and remove methods are the same. 'delete' might not work in some browsers
+        remove: remove,
+        update: update,
+        create: create
     };
 });
 
 crmModule.factory("crmSoapSvc", function (crmCommon, $http) {
-    var soapEndPoint = = 
+    'use strict';
 
     function execute(requestXml) {
 
@@ -152,11 +206,11 @@ crmModule.factory("crmSoapSvc", function (crmCommon, $http) {
                     '    </Execute>',
                     '  </s:Body>',
                     '</s:Envelope>'].join('');
-                    
+
         return $http({
             method: 'POST',
             data: xml,
-            url: crmCommon.getServerUrl() + '/XRMServices/2011/Organization.svc/web';
+            url: crmCommon.getServerUrl() + '/XRMServices/2011/Organization.svc/web',
             headers: {
                 "Accept": "application/xml, text/xml, */*",
                 "Content-Type": "text/xml; charset=utf-8",
@@ -164,7 +218,7 @@ crmModule.factory("crmSoapSvc", function (crmCommon, $http) {
             }
         });
     }
-    
+
     ///
     /// Assigns the reocrd to another system-user 
     ///
@@ -177,7 +231,7 @@ crmModule.factory("crmSoapSvc", function (crmCommon, $http) {
                         '            <c:key>Target</c:key>',
                         '            <c:value i:type=\"a:EntityReference\">',
                         '              <a:Id>' + recordId + '</a:Id>',
-                        '              <a:LogicalName>' + recordEntityLogicalName + '</a:LogicalName>',
+                        '              <a:LogicalName>' + recordEntityLogicalname + '</a:LogicalName>',
                         '              <a:Name i:nil=\"true\" />',
                         '            </c:value>',
                         '          </a:KeyValuePairOfstringanyType>',
@@ -198,7 +252,7 @@ crmModule.factory("crmSoapSvc", function (crmCommon, $http) {
     }
 
     return {
-        execute : execute,
-        assign : assign
+        execute: execute,
+        assign: assign
     };
 });
