@@ -98,13 +98,7 @@ crmModule.factory("crmRestSvc", function (crmCommon, $http) {
         return $http({
             method: "GET",
             url: url
-        }).then(function (res) {
-            return res.data.d.results;
         });
-        //return $http({
-        //    method: "GET",
-        //    url: url
-        //});
     }
 
     /// create a new record in CRM.
@@ -196,12 +190,19 @@ crmModule.factory("crmRestSvc", function (crmCommon, $http) {
 crmModule.factory("crmSoapSvc", function (crmCommon, $http) {
     'use strict';
 
+    function htmlEncode(xml) {
+        if (!xml) {
+            return xml;
+        }
+        return String(xml).replace(/&/g, "&amp;").replace(/\"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
     function execute(requestXml) {
 
-        var xml = ['<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\">',
+        var xml = ['<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">',
                     '  <s:Body>',
-                    '    <Execute xmlns=\"http://schemas.microsoft.com/xrm/2011/Contracts/Services\" ',
-                    '           xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">',
+                    '    <Execute xmlns="http://schemas.microsoft.com/xrm/2011/Contracts/Services" ',
+                    '           xmlns:i="http://www.w3.org/2001/XMLSchema-instance">',
                     requestXml,
                     '    </Execute>',
                     '  </s:Body>',
@@ -224,35 +225,63 @@ crmModule.factory("crmSoapSvc", function (crmCommon, $http) {
     ///
     function assign(recordId, recordEntityLogicalname, assigneeid) {
 
-        var assignRequest = ['<request i:type=\"b:AssignRequest\" xmlns:a=\"http://schemas.microsoft.com/xrm/2011/Contracts\" ',
-                        '           xmlns:b=\"http://schemas.microsoft.com/crm/2011/Contracts\">',
-                        '        <a:Parameters xmlns:c=\"http://schemas.datacontract.org/2004/07/System.Collections.Generic\">',
+        var assignRequest = ['<request i:type="b:AssignRequest" xmlns:a="http://schemas.microsoft.com/xrm/2011/Contracts" ',
+                        '           xmlns:b="http://schemas.microsoft.com/crm/2011/Contracts">',
+                        '        <a:Parameters xmlns:c="http://schemas.datacontract.org/2004/07/System.Collections.Generic">',
+                        // set the target value
                         '          <a:KeyValuePairOfstringanyType>',
                         '            <c:key>Target</c:key>',
-                        '            <c:value i:type=\"a:EntityReference\">',
+                        '            <c:value i:type="a:EntityReference">',
                         '              <a:Id>' + recordId + '</a:Id>',
                         '              <a:LogicalName>' + recordEntityLogicalname + '</a:LogicalName>',
-                        '              <a:Name i:nil=\"true\" />',
+                        '              <a:Name i:nil="true" />',
                         '            </c:value>',
                         '          </a:KeyValuePairOfstringanyType>',
+            
+                        // set the assignee value
                         '          <a:KeyValuePairOfstringanyType>',
                         '            <c:key>Assignee</c:key>',
-                        '            <c:value i:type=\"a:EntityReference\">',
+                        '            <c:value i:type="a:EntityReference">',
                         '              <a:Id>' + assigneeid + '</a:Id>',
                         '              <a:LogicalName>systemuser</a:LogicalName>',
-                        '              <a:Name i:nil=\"true\" />',
+                        '              <a:Name i:nil="true" />',
                         '            </c:value>',
                         '          </a:KeyValuePairOfstringanyType>',
+            
                         '        </a:Parameters>',
-                        '        <a:RequestId i:nil=\"true\" />',
+                        '        <a:RequestId i:nil="true" />',
                         '        <a:RequestName>Assign</a:RequestName>',
                         '      </request>'].join('');
 
         return execute(assignRequest);
     }
 
+    function fetchXmlRequest(fetchXml) {
+        var fetchRequest = ['<request i:type="b:RetrieveMultipleRequest" xmlns:b="http://schemas.microsoft.com/xrm/2011/Contracts">',
+            '             <b:Parameters xmlns:c="http://schemas.datacontract.org/2004/07/System.Collections.Generic">',
+            
+            '             <b:KeyValuePairOfstringanyType>',
+            '                 <c:key>Query</c:key>',
+            '                 <c:value i:type="b:FetchExpression">',
+            '                     <b:Query>',
+            htmlEncode(fetchXml),
+            '                     </b:Query>',
+            '                 </c:value>',
+            '             </b:KeyValuePairOfstringanyType>',
+            
+            '         </b:Parameters>',
+            '         <b:RequestId i:nil="true"/>',
+            '         <b:RequestName>RetrieveMultiple</b:RequestName>',
+            '     </request>'].join('');
+
+        return execute(fetchRequest);
+    }
+
+
     return {
         execute: execute,
-        assign: assign
+        assign: assign,
+        fetchXmlRequest: fetchXmlRequest,
+        htmlEncode: htmlEncode
     };
 });
