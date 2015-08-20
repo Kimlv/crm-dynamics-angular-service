@@ -43,23 +43,23 @@ Creates a new record in CRM. Pass the schema name of the entity and the entity a
 ```javascript
 crmRestSvc.create("Contact", { FirstName : "John", LastName : "Doe" });
 ```
-### crmRestSvc.update
+#### crmRestSvc.update
 ```javascript
 crmRestSvc.update("Contact", "{eee1c358-06ca-4ee3-afad-ddfb45a473e5}", { FirstName : "John", LastName : "Doe" });
 ```
-### crmRestSvc.remove
+#### crmRestSvc.remove
 ```javascript
 crmRestSvc.remove("Contact", "{eee1c358-06ca-4ee3-afad-ddfb45a473e5}");
 ```
-### crmRestSvc.delete
+#### crmRestSvc.delete
 Same as remove. This might not work in older browsers because delete is a reserved word so use the remove method instead.
 
-### crmRestSvc.associate
+#### crmRestSvc.associate
 ```javascript
 crmRestSvc.associate(accountId,	"Account", "Referencedaccount_parent_account", childId, "Account");
 ```
 
-### crmRestSvc.disassociate: disassociate,
+#### crmRestSvc.disassociate: disassociate,
 ```javascript
 crmRestSvc.disassociate(accountId, "Account", "Referencedaccount_parent_account", childId);
 ```
