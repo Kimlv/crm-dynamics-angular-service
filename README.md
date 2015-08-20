@@ -59,7 +59,7 @@ Same as remove. This might not work in older browsers because delete is a reserv
 crmRestSvc.associate(accountId,	"Account", "Referencedaccount_parent_account", childId, "Account");
 ```
 
-#### crmRestSvc.disassociate: disassociate,
+#### crmRestSvc.disassociate
 ```javascript
 crmRestSvc.disassociate(accountId, "Account", "Referencedaccount_parent_account", childId);
 ```
