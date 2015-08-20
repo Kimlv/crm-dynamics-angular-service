@@ -8,11 +8,25 @@ There are three main things which could be injected using the angular dependency
 * crmSoapSvc : make calls to crm server using the soap protocole
 * crmCommon : common functions shared by the above services
 
+```javascript
+angular.
+module("appModule", ["crmModule"]). // bring in the Crm Module
+controller("MyController", ["crmRestSvc", // bring in the Crm Rest Service
+  function (crmRestSvc) {
+    var that = this;
+    crmRestSvc.retrieveMultiple("Account", { $select : "Name,Telephone1", $top : 10 })
+      .then(function (accounts){
+        that.accounts = accounts;
+      });
+ }
+])
+```
+
 ## crmRestSvc
 #### crmRestSvc.retrieveMultiple 
 Retrives multiple records from CRM 
 ```javascript
-  crmRestSvc.retrieveMultiple("Account", { $select : "Name,Telephone1", $top : 1 })
+  crmRestSvc.retrieveMultiple("Account", { $select : "Name,Telephone1", $top : 10 })
   .then(function (accounts){
   // use accounts
   }, function (errors){
