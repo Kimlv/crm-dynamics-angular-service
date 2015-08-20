@@ -23,7 +23,7 @@ controller("MyController", ["crmRestSvc", // bring in the Crm Rest Service
 ```
 
 ## crmRestSvc
-#### crmRestSvc.retrieveMultiple 
+#### retrieveMultiple 
 Retrives multiple records from CRM 
 ```javascript
   crmRestSvc.retrieveMultiple("Account", { $select : "Name,Telephone1", $top : 10 })
@@ -34,7 +34,7 @@ Retrives multiple records from CRM
   })
 ```
 
-#### crmRestSvc.retrieve
+#### retrieve
 Retrieve single record from CRM
 ```javascript
   crmRestSvc.retrieve("Contact", "{eee1c358-06ca-4ee3-afad-ddfb45a473e5}")
@@ -52,28 +52,28 @@ Additional options could also be passed to the retrieve function
   // use contact
   })
 ```
-#### crmRestSvc.create
+#### create
 Creates a new record in CRM. Pass the schema name of the entity and the entity as an object.
 ```javascript
 crmRestSvc.create("Contact", { FirstName : "John", LastName : "Doe" });
 ```
-#### crmRestSvc.update
+#### update
 ```javascript
 crmRestSvc.update("Contact", "{eee1c358-06ca-4ee3-afad-ddfb45a473e5}", { FirstName : "John", LastName : "Doe" });
 ```
-#### crmRestSvc.remove
+#### remove
 ```javascript
 crmRestSvc.remove("Contact", "{eee1c358-06ca-4ee3-afad-ddfb45a473e5}");
 ```
-#### crmRestSvc.delete
+#### delete
 Same as remove. This might not work in older browsers because delete is a reserved word so use the remove method instead.
 
-#### crmRestSvc.associate
+#### associate
 ```javascript
 crmRestSvc.associate(accountId,	"Account", "Referencedaccount_parent_account", childId, "Account");
 ```
 
-#### crmRestSvc.disassociate
+#### disassociate
 ```javascript
 crmRestSvc.disassociate(accountId, "Account", "Referencedaccount_parent_account", childId);
 ```
